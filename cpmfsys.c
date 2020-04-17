@@ -28,7 +28,7 @@ void makeFreeList()
     for (int i = 0; i < 32; i++)
     {
         DirStructType *dir = mkDirStruct(i, disk[0]);
-        if (dir->status != UNUSED)
+        if (dir->status != UNUSED) // unused blocks are free'd -- dont check
         {
             for (int i = 0; i < 16; i++)
             {
@@ -206,8 +206,12 @@ int cpmDelete(char *name)
     {
         DirStructType *dir = mkDirStruct(location, disk[0]);
         dir->status = UNUSED; // set status to unused -> deleted
+        // if we skip unused blocks in the free list these will not be listed
+        // saves time as we do not have to clear out the data, the data will
+        // simply be cleared when new blocks arrive
+
         writeDirStruct(dir, block, disk[0]);
-        // TODO: free in free list ? not sure if that is necessary though
+        free(dir);
         return 0;
     }
     else
