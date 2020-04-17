@@ -1,5 +1,7 @@
 #include "cpmfsys.h"
 
+int freelist[256] = {0};
+
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
 // which tells which extent from block zero (extent numbers start with 0) to use to make the
@@ -17,7 +19,31 @@ void makeFreeList() {}
 // debugging function, print out the contents of the free list in 16 rows of 16, with each
 // row prefixed by the 2-digit hex address of the first block in that row. Denote a used
 // block with a *, a free block with a .
-void printFreeList() {}
+void printFreeList()
+{
+    char output;
+    for (int i = 0; i < 256; i++)
+    {
+        if (i % 16 == 0)
+        {
+            printf("%2x: ", i);
+        }
+        if (freelist[i] == 1)
+        {
+            output = "*";
+        }
+        else
+        {
+            output = ".";
+        }
+
+        printf("%c ", output);
+        if ((i + 1) % 16 == 0)
+        {
+            printf("\n");
+        }
+    }
+}
 
 // internal function, returns -1 for illegal name or name not found
 // otherwise returns extent nunber 0-31
