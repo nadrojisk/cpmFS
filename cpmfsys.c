@@ -44,6 +44,7 @@ void makeFreeList()
 // block with a *, a free block with a .
 void printFreeList()
 {
+    makeFreeList();
     char output;
     for (int i = 0; i < 256; i++)
     {
