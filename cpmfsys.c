@@ -46,7 +46,35 @@ void cpmDir() {}
 
 //read directory block,
 // modify the extent for file named oldName with newName, and write to the disk
-int cpmRename(char *oldName, char *newName) {}
+int cpmRename(char *oldName, char *newName)
+{
+
+    if (checkLegalName(newName) == 0)
+    { // invalid filename2
+        printf("%s is an invalid filename\n", newName);
+        return -2;
+    }
+    else if (findExtendWithName(newName, NULL) != -1)
+    { // dest exists
+        printf("%s already exists\n", newName);
+        return -3;
+    }
+
+    uint8_t block;
+    int location = findExtentWithName(oldName, &block);
+    if (location != -1)
+    {
+        DirStructType *dir = mkDirStruct(location, disk[0]);
+        strcpy(dir->name, newName);
+        writeDirStruct(dir, block, disk[0]);
+        return 0;
+    }
+    else
+    {
+        printf("%s does not exist\n", oldName);
+        return -1;
+    }
+}
 
 // delete the file named name, and free its disk blocks in the free list
 int cpmDelete(char *name) {}
