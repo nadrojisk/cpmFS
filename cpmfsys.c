@@ -1,6 +1,7 @@
 #include "cpmfsys.h"
 
 int freelist[256] = {1, 0};
+#define UNUSED 0xe5
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -120,7 +121,32 @@ bool illegalstart(char *name)
 // the dot anyway, e.g. "myfile. 234" would indicate a file whose name was myfile, with no
 // extension and a size of 234 bytes. This function returns no error codes, since it should
 // never fail unless something is seriously wrong with the disk
-void cpmDir() {}
+void cpmDir()
+{
+    printf("DIRECTORY LISTING\n");
+    for (int i = 0; i < 32; i++)
+    {
+        DirStructType *dir = mkDirStruct(i, disk[0]);
+        if (dir->status != UNUSED)
+        {
+            // get dir length
+            int full_blocks = 0;
+
+            for (int j = 0; j < 16; j++)
+            {
+                // looks ahead by one, the last block size is calculated by RC & BC
+                if (dir->blocks[j + 1] == 0)
+                {
+                    break;
+                }
+                full_blocks++;
+            }
+            int length = dir->RC * 128 + dir->BC + full_blocks * 1024;
+
+            printf("%s.%s %d\n", dir->name, dir->extension, length);
+        }
+    }
+}
 
 // error codes for next five functions (not all errors apply to all 5 functions)
 /*
@@ -177,7 +203,7 @@ int cpmDelete(char *name)
     if (location != -1)
     {
         DirStructType *dir = mkDirStruct(location, disk[0]);
-        dir->status = 0xe5; // set status to unused -> deleted
+        dir->status = UNUSED; // set status to unused -> deleted
         writeDirStruct(dir, block, disk[0]);
         // TODO: free in free list ? not sure if that is necessary though
         return 0;
