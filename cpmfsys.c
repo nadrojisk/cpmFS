@@ -75,7 +75,44 @@ int findExtentWithName(char *name, uint8_t *block0) {}
 
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
-bool checkLegalName(char *name) {}
+bool checkLegalName(char *name)
+{
+    // cannot be empty
+    if (strcmp(name, "") == 0)
+    {
+        return false;
+    }
+
+    // incorrect length
+    else if (strlen(name) != 8)
+    {
+        return false;
+    }
+
+    // illegal first character
+    else if (illegalstart(name))
+    {
+        return false;
+    }
+
+    else
+    {
+        return true;
+    }
+}
+
+// checks to see if the first character is A-Z a-z or 0-9
+bool illegalstart(char *name)
+{
+    int first = (int)name[0];
+
+    if (first < 0x30 || (first > 0x39 && first < 0x41) || (first > 0x5a && first < 0x61) || first > 0x7a)
+    {
+        return true;
+    }
+
+    return false;
+}
 
 // print the file directory to stdout. Each filename should be printed on its own line,
 // with the file size, in base 10, following the name and extension, with one space between
