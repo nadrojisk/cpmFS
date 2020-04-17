@@ -50,6 +50,7 @@ void printFreeList()
 {
     makeFreeList();
     char output;
+    printf("FREE BLOCK LIST: (* means in-use)\n");
     for (int i = 0; i < 256; i++)
     {
         if (i % 16 == 0)
