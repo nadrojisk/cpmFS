@@ -2,6 +2,7 @@
 
 int freelist[256] = {1, 0};
 #define UNUSED 0xe5
+#define MAX_EXTENTS 32
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -25,7 +26,7 @@ void makeFreeList()
     }
 
     // recalculate free list
-    for (int i = 0; i < 32; i++)
+    for (int i = 0; i < MAX_EXTENTS; i++)
     {
         DirStructType *dir = mkDirStruct(i, disk[0]);
         if (dir->status != UNUSED) // unused blocks are free'd -- dont check
@@ -74,7 +75,29 @@ void printFreeList()
 
 // internal function, returns -1 for illegal name or name not found
 // otherwise returns extent nunber 0-31
-int findExtentWithName(char *name, uint8_t *block0) {}
+int findExtentWithName(char *name, uint8_t *block0)
+{
+    if (checkLegalName(name) == true)
+    {
+        int extent_index;
+        for (int i = 0; i < MAX_EXTENTS; i++)
+        {
+            DirStructType *dir = mkDirStruct(i, block0);
+            if (dir->status != UNUSED)
+            {
+                if (strcmp(dir->name, name) == 0)
+                {
+                    return i;
+                }
+            }
+        }
+        return extent_index;
+    }
+    else
+    {
+        return -1;
+    }
+}
 
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
@@ -126,7 +149,7 @@ bool illegalstart(char *name)
 void cpmDir()
 {
     printf("DIRECTORY LISTING\n");
-    for (int i = 0; i < 32; i++)
+    for (int i = 0; i < MAX_EXTENTS; i++)
     {
         DirStructType *dir = mkDirStruct(i, disk[0]);
         if (dir->status != UNUSED)
