@@ -1,6 +1,6 @@
 #include "cpmfsys.h"
 
-int freelist[256] = {0};
+int freelist[256] = {1, 0};
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -15,7 +15,30 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e) {}
 // populate the FreeList global data structure. freeList[i] == true means
 // that block i of the disk is free. block zero is never free, since it holds
 // the directory. freeList[i] == false means the block is in use.
-void makeFreeList() {}
+void makeFreeList()
+{
+    // clear freelist
+    for (int i = 1; i < 256; i++)
+    {
+        freelist[i] = 0;
+    }
+
+    // recalculate free list
+    for (int i = 0; i < 32; i++)
+    {
+        DirStructType *dir = mkDirStruct(i, disk[0]);
+
+        for (int i = 0; i < 16; i++)
+        {
+            int index = dir->blocks[i];
+            if (index != 0)
+            {
+                freelist[index] = 1;
+            }
+        }
+    }
+}
+
 // debugging function, print out the contents of the free list in 16 rows of 16, with each
 // row prefixed by the 2-digit hex address of the first block in that row. Denote a used
 // block with a *, a free block with a .
