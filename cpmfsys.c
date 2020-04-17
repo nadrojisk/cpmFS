@@ -75,7 +75,7 @@ void printFreeList()
 }
 
 // internal function, returns -1 for illegal name or name not found
-// otherwise returns extent nunber 0-31
+// otherwise returns extent number 0-31
 int findExtentWithName(char *name, uint8_t *block0)
 {
     if (checkLegalName(name) == true)
