@@ -77,4 +77,27 @@ int cpmRename(char *oldName, char *newName)
 }
 
 // delete the file named name, and free its disk blocks in the free list
-int cpmDelete(char *name) {}
+int cpmDelete(char *name)
+{
+    if (checkLegalName(name) == 0)
+    { // invalid filename2
+        printf("%s is an invalid filename\n", name);
+        return -2;
+    }
+
+    uint8_t block;
+    int location = findExtentWithName(name, &block);
+    if (location != -1)
+    {
+        DirStructType *dir = mkDirStruct(location, disk[0]);
+        dir->status = 0xe5; // set status to unused -> deleted
+        writeDirStruct(dir, block, disk[0]);
+        // TODO: free in free list ? not sure if that is necessary though
+        return 0;
+    }
+    else
+    {
+        printf("%s does not exist\n", name);
+        return -1;
+    }
+}
