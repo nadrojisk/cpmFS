@@ -18,7 +18,7 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e) {}
 // the directory. freeList[i] == false means the block is in use.
 void makeFreeList()
 {
-    // clear freelist
+    // clear freelist, skip first block as it is dir
     for (int i = 1; i < 256; i++)
     {
         freelist[i] = 0;
@@ -28,13 +28,15 @@ void makeFreeList()
     for (int i = 0; i < 32; i++)
     {
         DirStructType *dir = mkDirStruct(i, disk[0]);
-
-        for (int i = 0; i < 16; i++)
+        if (dir->status != UNUSED)
         {
-            int index = dir->blocks[i];
-            if (index != 0)
+            for (int i = 0; i < 16; i++)
             {
-                freelist[index] = 1;
+                int index = dir->blocks[i];
+                if (index != 0)
+                {
+                    freelist[index] = 1;
+                }
             }
         }
     }
