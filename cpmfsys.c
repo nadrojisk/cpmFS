@@ -16,25 +16,25 @@ DirStructType *mkDirStruct(int index, uint8_t *e)
     DirStructType *dir = malloc(sizeof(DirStructType));
 
     // read blob from disk
-    uint8_t *blob = calloc(1, 1024);
-    blockRead(blob, 0);
+    uint8_t *block = calloc(1, 1024);
+    blockRead(block, 0);
 
-    blob += index * 32;
-    int blob_offset = 0;
+    block += index * 32;
+    int block_offset = 0;
 
     // copy status over
-    memcpy(&dir->status, blob + blob_offset, sizeof(dir->status));
-    blob_offset += sizeof(dir->status);
+    memcpy(&dir->status, block + block_offset, sizeof(dir->status));
+    block_offset += sizeof(dir->status);
 
     // copy the strings seperately as they need to bring over the null byte
     // this null byte is not stored on disk... for some reason
-    memcpy(&dir->name, blob + blob_offset, sizeof(dir->name) - 1);
-    blob_offset += sizeof(dir->name) - 1;
-    memcpy(&dir->extension, blob + blob_offset, sizeof(dir->extension) - 1);
-    blob_offset += sizeof(dir->extension) - 1;
+    memcpy(&dir->name, block + block_offset, sizeof(dir->name) - 1);
+    block_offset += sizeof(dir->name) - 1;
+    memcpy(&dir->extension, block + block_offset, sizeof(dir->extension) - 1);
+    block_offset += sizeof(dir->extension) - 1;
 
     // bring over rest of dir
-    memcpy(&dir->XL, blob + blob_offset, sizeof(DirStructType) - blob_offset);
+    memcpy(&dir->XL, block + block_offset, sizeof(DirStructType) - block_offset);
 
     return dir;
 }
@@ -43,13 +43,16 @@ DirStructType *mkDirStruct(int index, uint8_t *e)
 // in block of memory (disk block 0) pointed to by e
 void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e)
 {
-    uint8_t *blob = calloc(1, 1024);
-    uint8_t *offset = blob;
+    uint8_t *block = calloc(1, 1024);
+    uint8_t *offset;
 
     DirStructType *tmp;
     for (int i = 0; i < MAX_EXTENTS; i++)
     {
 
+        // when loop equals our index dont pull dir from disk
+        // rather use one that is passed in as this was the one that has
+        // been changed
         if (i == index)
         {
             tmp = d;
@@ -58,27 +61,27 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e)
         {
             tmp = mkDirStruct(i, NULL);
         }
-        blob = offset + i * 32;
-        int blob_offset = 0;
+        offset = block + i * 32;
+        int block_offset = 0;
 
         // copy status over
-        memcpy(blob + blob_offset, &tmp->status, sizeof(tmp->status));
-        blob_offset += sizeof(tmp->status);
+        memcpy(offset + block_offset, &tmp->status, sizeof(tmp->status));
+        block_offset += sizeof(tmp->status);
 
         // copy the strings seperately as they need to bring over the null byte
         // this null byte is not stored on disk... for some reason
-        memcpy(blob + blob_offset, &tmp->name, sizeof(tmp->name) - 1);
-        blob_offset += sizeof(tmp->name) - 1;
-        memcpy(blob + blob_offset, &tmp->extension, sizeof(tmp->extension) - 1);
-        blob_offset += sizeof(tmp->extension) - 1;
+        memcpy(offset + block_offset, &tmp->name, sizeof(tmp->name) - 1);
+        block_offset += sizeof(tmp->name) - 1;
+        memcpy(offset + block_offset, &tmp->extension, sizeof(tmp->extension) - 1);
+        block_offset += sizeof(tmp->extension) - 1;
 
         // bring over rest of dir
-        memcpy(blob + blob_offset, &tmp->XL, 32 - blob_offset);
+        memcpy(offset + block_offset, &tmp->XL, 32 - block_offset);
 
         free(tmp);
     }
-
-    blockWrite(offset, 0);
+    // write block to disk
+    blockWrite(block, 0);
 }
 
 // populate the FreeList global data structure. freeList[i] == true means
@@ -173,18 +176,6 @@ int findExtentWithName(char *name, uint8_t *block0)
         return -1;
     }
 }
-// checks to see if the first character is A-Z a-z or 0-9
-bool illegalstart(char *name)
-{
-    int first = (int)name[0];
-
-    if (first < 0x30 || (first > 0x39 && first < 0x41) || (first > 0x5a && first < 0x61) || first > 0x7a)
-    {
-        return true;
-    }
-
-    return false;
-}
 
 // split name into filename and extension
 char **split_name(char *name)
@@ -251,6 +242,19 @@ char **strip_name(DirStructType *dir)
         strcpy(output[1], "");
     }
     return output;
+}
+
+// checks to see if the first character is A-Z a-z or 0-9
+bool illegalstart(char *name)
+{
+    int first = (int)name[0];
+
+    if (first < 0x30 || (first > 0x39 && first < 0x41) || (first > 0x5a && first < 0x61) || first > 0x7a)
+    {
+        return true;
+    }
+
+    return false;
 }
 
 // internal function, returns true for legal name (8.3 format), false for illegal
@@ -329,11 +333,16 @@ void cpmDir()
                 }
             }
 
+            // last block is counted with RC and BC
             full_blocks--;
             int length = (dir->RC * 128) + dir->BC + (full_blocks * 1024);
+
+            // merge filename and extension for padding
             char **names = strip_name(dir);
             char filename[14];
             sprintf(filename, "%s.%s", names[0], names[1]);
+
+            // pad filename with spaces to get even output
             printf("%-12s %d\n", filename, length);
             free_names(names);
         }
@@ -355,18 +364,18 @@ int cpmRename(char *oldName, char *newName)
 {
     int return_code;
     if (checkLegalName(newName) == 0)
-    { // invalid filename2
+    { // invalid new name
         printf("%s is an invalid filename\n", newName);
         return_code = -2;
     }
     else if (findExtentWithName(newName, NULL) != -1)
-    { // dest exists
+    { // dest already exists
         printf("%s already exists\n", newName);
         return_code = -3;
     }
     else
     {
-
+        // find extent, then rename, then write to disk
         int location = findExtentWithName(oldName, NULL);
         if (location != -1)
         {
@@ -379,6 +388,7 @@ int cpmRename(char *oldName, char *newName)
         }
         else
         {
+            // original file does not exist
             printf("%s does not exist\n", oldName);
             return_code = -1;
         }
@@ -390,11 +400,6 @@ int cpmRename(char *oldName, char *newName)
 // delete the file named name, and free its disk blocks in the free list
 int cpmDelete(char *name)
 {
-    if (checkLegalName(name) == 0)
-    { // invalid filename2
-        printf("%s is an invalid filename\n", name);
-        return -2;
-    }
 
     uint8_t block;
     int location = findExtentWithName(name, &block);
