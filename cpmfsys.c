@@ -245,13 +245,15 @@ void cpmDir()
             for (int j = 0; j < 16; j++)
             {
                 // looks ahead by one, the last block size is calculated by RC & BC
-                if (dir->blocks[j + 1] == 0)
+                if (dir->blocks[j] == 0)
                 {
                     break;
                 }
                 full_blocks++;
             }
-            int length = dir->RC * 128 + dir->BC + full_blocks * 1024;
+
+            full_blocks--;
+            int length = (dir->RC * 128) + dir->BC + (full_blocks * 1024);
 
             printf("%s.%s %d\n", dir->name, dir->extension, length);
         }
