@@ -4,6 +4,8 @@ int freelist[256] = {1, 0};
 #define UNUSED 0xe5
 #define MAX_EXTENTS 32
 
+char **split_name(char *name);
+
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
 // which tells which extent from block zero (extent numbers start with 0) to use to make the
@@ -96,19 +98,27 @@ int findExtentWithName(char *name, uint8_t *block0)
 {
     if (checkLegalName(name) == true)
     {
-        int extent_index;
+        char **names = split_name(name);
+        char *filename = names[0];
+        char *extension = names[1];
+
         for (int i = 0; i < MAX_EXTENTS; i++)
         {
             DirStructType *dir = mkDirStruct(i, block0);
             if (dir->status != UNUSED)
             {
-                if (strcmp(dir->name, name) == 0)
+                // pad incoming filename and extension with spaces
+                sprintf(filename, "%-8s", filename);
+                sprintf(extension, "%-3s", extension);
+
+                if (strcmp(dir->name, filename) == 0 && strcmp(dir->extension, extension) == 0)
                 {
                     return i;
                 }
             }
         }
-        return extent_index;
+
+        return -1;
     }
     else
     {
@@ -127,32 +137,92 @@ bool illegalstart(char *name)
 
     return false;
 }
+
+// split name into filename and extension
+char **split_name(char *name)
+{
+    char str[80];
+    strcpy(str, name);
+
+    // split name from extension
+    char *filename = strtok(str, ".");
+    char *extension = strtok(NULL, ".");
+
+    char **output = malloc(16);
+    output[0] = malloc(9);
+    output[1] = malloc(4);
+    strcpy(output[0], filename);
+
+    // extensions can be null, so if it is dont copy it over
+    if (extension != NULL)
+    {
+
+        strcpy(output[1], extension);
+    }
+    else
+    {
+        strcpy(output[1], "");
+    }
+    return output;
+}
+
+// as we created the split names with malloc we need to free
+// the data when we are done with it
+void free_names(char **names)
+{
+    free(names[0]);
+    free(names[1]);
+    free(names);
+}
+
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
 bool checkLegalName(char *name)
 {
-    // cannot be empty
+    bool return_code;
+    // name cannot be empty
     if (strcmp(name, "") == 0)
     {
-        return false;
+        return_code = false;
     }
-
-    // incorrect length
-    else if (strlen(name) != 8)
-    {
-        return false;
-    }
-
-    // illegal first character
-    else if (illegalstart(name))
-    {
-        return false;
-    }
-
     else
     {
-        return true;
+        char **names = split_name(name);
+        char *filename = names[0];
+        char *extension = names[1];
+
+        // incorrect filename length
+        if (strlen(filename) > 8)
+        {
+            return_code = false;
+        }
+        // incorrect extension length
+        else if (strlen(extension) > 3)
+        {
+            return_code = false;
+        }
+
+        // illegal first character
+        else if (illegalstart(filename))
+        {
+            return_code = false;
+        }
+
+        // if extension isnt empty check for legal first character
+        else if ((strcmp(extension, "") != 0) && illegalstart(extension))
+        {
+            return_code = false;
+        }
+
+        // legal name
+        else
+        {
+            return_code = true;
+        }
+        free_names(names);
     }
+
+    return return_code;
 }
 
 // print the file directory to stdout. Each filename should be printed on its own line,
@@ -201,32 +271,37 @@ void cpmDir()
 // modify the extent for file named oldName with newName, and write to the disk
 int cpmRename(char *oldName, char *newName)
 {
-
+    int return_code;
     if (checkLegalName(newName) == 0)
     { // invalid filename2
         printf("%s is an invalid filename\n", newName);
-        return -2;
+        return_code = -2;
     }
     else if (findExtentWithName(newName, NULL) != -1)
     { // dest exists
         printf("%s already exists\n", newName);
-        return -3;
-    }
-
-    uint8_t block;
-    int location = findExtentWithName(oldName, &block);
-    if (location != -1)
-    {
-        DirStructType *dir = mkDirStruct(location, NULL);
-        strcpy(dir->name, newName);
-        writeDirStruct(dir, block, NULL);
-        return 0;
+        return_code = -3;
     }
     else
     {
-        printf("%s does not exist\n", oldName);
-        return -1;
+        uint8_t block;
+        int location = findExtentWithName(oldName, NULL);
+        if (location != -1)
+        {
+            DirStructType *dir = mkDirStruct(location, NULL);
+            strcpy(dir->name, newName);
+            writeDirStruct(dir, block, NULL);
+            return_code = 0;
+        }
+        else
+        {
+            printf("%s does not exist\n", oldName);
+            return_code = -1;
+        }
     }
+
+    printf("cpmRename return code = %d,\n", return_code);
+    return return_code;
 }
 
 // delete the file named name, and free its disk blocks in the free list
