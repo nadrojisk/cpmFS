@@ -5,6 +5,7 @@ int freelist[256] = {1, 0};
 #define MAX_EXTENTS 32
 
 char **split_name(char *name);
+char **strip_name(DirStructType *dir);
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -107,11 +108,10 @@ int findExtentWithName(char *name, uint8_t *block0)
             DirStructType *dir = mkDirStruct(i, block0);
             if (dir->status != UNUSED)
             {
-                // pad incoming filename and extension with spaces
-                sprintf(filename, "%-8s", filename);
-                sprintf(extension, "%-3s", extension);
+                // strip filename and extension of spaces
+                char **name = strip_name(dir);
 
-                if (strcmp(dir->name, filename) == 0 && strcmp(dir->extension, extension) == 0)
+                if (strcmp(name[0], filename) == 0 && strcmp(name[1], extension) == 0)
                 {
                     return i;
                 }
@@ -173,6 +173,36 @@ void free_names(char **names)
     free(names[0]);
     free(names[1]);
     free(names);
+}
+
+// Strips filename and extension of spaces
+char **strip_name(DirStructType *dir)
+{
+    char name[9];
+    char extension[4];
+    strcpy(name, dir->name);
+    strcpy(extension, dir->extension);
+
+    // split name from extension
+    char *stripped_name = strtok(name, " ");
+    char *stripped_extension = strtok(extension, " ");
+
+    char **output = malloc(16);
+    output[0] = malloc(9);
+    output[1] = malloc(4);
+    strcpy(output[0], stripped_name);
+
+    // extensions can be null, so if it is dont copy it over
+    if (stripped_extension != NULL)
+    {
+
+        strcpy(output[1], stripped_extension);
+    }
+    else
+    {
+        strcpy(output[1], "");
+    }
+    return output;
 }
 
 // internal function, returns true for legal name (8.3 format), false for illegal
@@ -254,8 +284,10 @@ void cpmDir()
 
             full_blocks--;
             int length = (dir->RC * 128) + dir->BC + (full_blocks * 1024);
-
-            printf("%s.%s %d\n", dir->name, dir->extension, length);
+            char **names = strip_name(dir);
+            char *filename;
+            sprintf(filename, "%s.%s", names[0], names[1]);
+            printf("%-12s %d\n", filename, length);
         }
     }
 }
