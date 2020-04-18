@@ -8,7 +8,23 @@ int freelist[256] = {1, 0};
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
 // which tells which extent from block zero (extent numbers start with 0) to use to make the
 // DirStructType value to return.
-DirStructType *mkDirStruct(int index, uint8_t *e) {}
+DirStructType *mkDirStruct(int index, uint8_t *e)
+{
+    DirStructType *dir = malloc(sizeof(DirStructType));
+
+    // read blob from disk
+    uint8_t *blob = calloc(1, 1024);
+    blockRead(blob, 0);
+
+    // convert to DirStruct
+    // each extend is 32 bytes
+    memcpy(&dir->status, blob + (index * 32), sizeof(dir->status));
+    memcpy(&dir->name, blob + (index * 32) + sizeof(dir->status), sizeof(dir->name) - 1);
+    memcpy(&dir->extension, blob + (index * 32) + sizeof(dir->status) + sizeof(dir->name) - 1, sizeof(dir->extension) - 1);
+    memcpy(&dir->XL, blob + (index * 32) + sizeof(dir->status) + sizeof(dir->name) - 1 + sizeof(dir->extension) - 1, sizeof(DirStructType) - (sizeof(dir->status) + sizeof(dir->name) - 1 + sizeof(dir->extension) - 1));
+
+    return dir;
+}
 
 // function to write contents of a DirStructType struct back to the specified index of the extent
 // in block of memory (disk block 0) pointed to by e
@@ -28,7 +44,7 @@ void makeFreeList()
     // recalculate free list
     for (int i = 0; i < MAX_EXTENTS; i++)
     {
-        DirStructType *dir = mkDirStruct(i, disk[0]);
+        DirStructType *dir = mkDirStruct(i, NULL);
         if (dir->status != UNUSED) // unused blocks are free'd -- dont check
         {
             for (int i = 0; i < 16; i++)
@@ -59,11 +75,11 @@ void printFreeList()
         }
         if (freelist[i] == 1)
         {
-            output = "*";
+            output = '*';
         }
         else
         {
-            output = ".";
+            output = '.';
         }
 
         printf("%c ", output);
@@ -99,7 +115,18 @@ int findExtentWithName(char *name, uint8_t *block0)
         return -1;
     }
 }
+// checks to see if the first character is A-Z a-z or 0-9
+bool illegalstart(char *name)
+{
+    int first = (int)name[0];
 
+    if (first < 0x30 || (first > 0x39 && first < 0x41) || (first > 0x5a && first < 0x61) || first > 0x7a)
+    {
+        return true;
+    }
+
+    return false;
+}
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
 bool checkLegalName(char *name)
@@ -128,19 +155,6 @@ bool checkLegalName(char *name)
     }
 }
 
-// checks to see if the first character is A-Z a-z or 0-9
-bool illegalstart(char *name)
-{
-    int first = (int)name[0];
-
-    if (first < 0x30 || (first > 0x39 && first < 0x41) || (first > 0x5a && first < 0x61) || first > 0x7a)
-    {
-        return true;
-    }
-
-    return false;
-}
-
 // print the file directory to stdout. Each filename should be printed on its own line,
 // with the file size, in base 10, following the name and extension, with one space between
 // the extension and the size. If a file does not have an extension it is acceptable to print
@@ -152,7 +166,7 @@ void cpmDir()
     printf("DIRECTORY LISTING\n");
     for (int i = 0; i < MAX_EXTENTS; i++)
     {
-        DirStructType *dir = mkDirStruct(i, disk[0]);
+        DirStructType *dir = mkDirStruct(i, NULL);
         if (dir->status != UNUSED)
         {
             // get dir length
@@ -193,7 +207,7 @@ int cpmRename(char *oldName, char *newName)
         printf("%s is an invalid filename\n", newName);
         return -2;
     }
-    else if (findExtendWithName(newName, NULL) != -1)
+    else if (findExtentWithName(newName, NULL) != -1)
     { // dest exists
         printf("%s already exists\n", newName);
         return -3;
@@ -203,9 +217,9 @@ int cpmRename(char *oldName, char *newName)
     int location = findExtentWithName(oldName, &block);
     if (location != -1)
     {
-        DirStructType *dir = mkDirStruct(location, disk[0]);
+        DirStructType *dir = mkDirStruct(location, NULL);
         strcpy(dir->name, newName);
-        writeDirStruct(dir, block, disk[0]);
+        writeDirStruct(dir, block, NULL);
         return 0;
     }
     else
@@ -228,13 +242,13 @@ int cpmDelete(char *name)
     int location = findExtentWithName(name, &block);
     if (location != -1)
     {
-        DirStructType *dir = mkDirStruct(location, disk[0]);
+        DirStructType *dir = mkDirStruct(location, NULL);
         dir->status = UNUSED; // set status to unused -> deleted
         // if we skip unused blocks in the free list these will not be listed
         // saves time as we do not have to clear out the data, the data will
         // simply be cleared when new blocks arrive
 
-        writeDirStruct(dir, block, disk[0]);
+        writeDirStruct(dir, block, NULL);
         free(dir);
         return 0;
     }
