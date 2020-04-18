@@ -285,9 +285,10 @@ void cpmDir()
             full_blocks--;
             int length = (dir->RC * 128) + dir->BC + (full_blocks * 1024);
             char **names = strip_name(dir);
-            char *filename;
+            char filename[14];
             sprintf(filename, "%s.%s", names[0], names[1]);
             printf("%-12s %d\n", filename, length);
+            free_names(names);
         }
     }
 }
