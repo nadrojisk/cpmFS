@@ -19,12 +19,22 @@ DirStructType *mkDirStruct(int index, uint8_t *e)
     uint8_t *blob = calloc(1, 1024);
     blockRead(blob, 0);
 
-    // convert to DirStruct
-    // each extend is 32 bytes
-    memcpy(&dir->status, blob + (index * 32), sizeof(dir->status));
-    memcpy(&dir->name, blob + (index * 32) + sizeof(dir->status), sizeof(dir->name) - 1);
-    memcpy(&dir->extension, blob + (index * 32) + sizeof(dir->status) + sizeof(dir->name) - 1, sizeof(dir->extension) - 1);
-    memcpy(&dir->XL, blob + (index * 32) + sizeof(dir->status) + sizeof(dir->name) - 1 + sizeof(dir->extension) - 1, sizeof(DirStructType) - (sizeof(dir->status) + sizeof(dir->name) - 1 + sizeof(dir->extension) - 1));
+    blob += index * 32;
+    int blob_offset = 0;
+
+    // copy status over
+    memcpy(&dir->status, blob + blob_offset, sizeof(dir->status));
+    blob_offset += sizeof(dir->status);
+
+    // copy the strings seperately as they need to bring over the null byte
+    // this null byte is not stored on disk... for some reason
+    memcpy(&dir->name, blob + blob_offset, sizeof(dir->name) - 1);
+    blob_offset += sizeof(dir->name) - 1;
+    memcpy(&dir->extension, blob + blob_offset, sizeof(dir->extension) - 1);
+    blob_offset += sizeof(dir->extension) - 1;
+
+    // bring over rest of dir
+    memcpy(&dir->XL, blob + blob_offset, sizeof(DirStructType) - blob_offset);
 
     return dir;
 }
