@@ -41,7 +41,45 @@ DirStructType *mkDirStruct(int index, uint8_t *e)
 
 // function to write contents of a DirStructType struct back to the specified index of the extent
 // in block of memory (disk block 0) pointed to by e
-void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e) {}
+void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e)
+{
+    uint8_t *blob = calloc(1, 1024);
+    uint8_t *offset = blob;
+
+    DirStructType *tmp;
+    for (int i = 0; i < MAX_EXTENTS; i++)
+    {
+
+        if (i == index)
+        {
+            tmp = d;
+        }
+        else
+        {
+            tmp = mkDirStruct(i, NULL);
+        }
+        blob = offset + i * 32;
+        int blob_offset = 0;
+
+        // copy status over
+        memcpy(blob + blob_offset, &tmp->status, sizeof(tmp->status));
+        blob_offset += sizeof(tmp->status);
+
+        // copy the strings seperately as they need to bring over the null byte
+        // this null byte is not stored on disk... for some reason
+        memcpy(blob + blob_offset, &tmp->name, sizeof(tmp->name) - 1);
+        blob_offset += sizeof(tmp->name) - 1;
+        memcpy(blob + blob_offset, &tmp->extension, sizeof(tmp->extension) - 1);
+        blob_offset += sizeof(tmp->extension) - 1;
+
+        // bring over rest of dir
+        memcpy(blob + blob_offset, &tmp->XL, 32 - blob_offset);
+
+        free(tmp);
+    }
+
+    blockWrite(offset, 0);
+}
 
 // populate the FreeList global data structure. freeList[i] == true means
 // that block i of the disk is free. block zero is never free, since it holds
@@ -84,7 +122,7 @@ void printFreeList()
     {
         if (i % 16 == 0)
         {
-            printf("%2x: ", i);
+            printf("%3x: ", i);
         }
         if (freelist[i] == 1)
         {
@@ -285,11 +323,10 @@ void cpmDir()
             for (int j = 0; j < 16; j++)
             {
                 // looks ahead by one, the last block size is calculated by RC & BC
-                if (dir->blocks[j] == 0)
+                if (dir->blocks[j] != 0)
                 {
-                    break;
+                    full_blocks++;
                 }
-                full_blocks++;
             }
 
             full_blocks--;
@@ -329,13 +366,15 @@ int cpmRename(char *oldName, char *newName)
     }
     else
     {
-        uint8_t block;
+
         int location = findExtentWithName(oldName, NULL);
         if (location != -1)
         {
             DirStructType *dir = mkDirStruct(location, NULL);
-            strcpy(dir->name, newName);
-            writeDirStruct(dir, block, NULL);
+            char **names = split_name(newName);
+            strcpy(dir->name, names[0]);
+            strcpy(dir->extension, names[1]);
+            writeDirStruct(dir, location, NULL);
             return_code = 0;
         }
         else
@@ -367,8 +406,8 @@ int cpmDelete(char *name)
         // saves time as we do not have to clear out the data, the data will
         // simply be cleared when new blocks arrive
 
-        writeDirStruct(dir, block, NULL);
-        free(dir);
+        writeDirStruct(dir, location, NULL);
+        // free(dir);
         return 0;
     }
     else
