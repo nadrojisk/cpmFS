@@ -335,7 +335,6 @@ int cpmRename(char *oldName, char *newName)
         }
     }
 
-    printf("cpmRename return code = %d,\n", return_code);
     return return_code;
 }
 
