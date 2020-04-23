@@ -26,7 +26,7 @@ DirStructType *mkDirStruct(int index, uint8_t *e)
     memcpy(&dir->status, block + block_offset, sizeof(dir->status));
     block_offset += sizeof(dir->status);
 
-    // copy the strings seperately as they need to bring over the null byte
+    // copy the strings separately as they need to bring over the null byte
     // this null byte is not stored on disk... for some reason
     memcpy(&dir->name, block + block_offset, sizeof(dir->name) - 1);
     block_offset += sizeof(dir->name) - 1;
@@ -68,7 +68,7 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e)
         memcpy(offset + block_offset, &tmp->status, sizeof(tmp->status));
         block_offset += sizeof(tmp->status);
 
-        // copy the strings seperately as they need to bring over the null byte
+        // copy the strings separately as they need to bring over the null byte
         // this null byte is not stored on disk... for some reason
         memcpy(offset + block_offset, &tmp->name, sizeof(tmp->name) - 1);
         block_offset += sizeof(tmp->name) - 1;
