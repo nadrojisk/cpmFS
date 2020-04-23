@@ -4,8 +4,8 @@ int freelist[256] = {1, 0};
 #define UNUSED 0xe5
 #define MAX_EXTENTS 32
 
-char **split_name(char *name);
-char **strip_name(DirStructType *dir);
+char **splitName(char *name);
+char **stripName(DirStructType *dir);
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -150,7 +150,7 @@ int findExtentWithName(char *name, uint8_t *block0)
 {
     if (checkLegalName(name) == true)
     {
-        char **names = split_name(name);
+        char **names = splitName(name);
         char *filename = names[0];
         char *extension = names[1];
 
@@ -160,7 +160,7 @@ int findExtentWithName(char *name, uint8_t *block0)
             if (dir->status != UNUSED)
             {
                 // strip filename and extension of spaces
-                char **name = strip_name(dir);
+                char **name = stripName(dir);
 
                 if (strcmp(name[0], filename) == 0 && strcmp(name[1], extension) == 0)
                 {
@@ -178,7 +178,7 @@ int findExtentWithName(char *name, uint8_t *block0)
 }
 
 // split name into filename and extension
-char **split_name(char *name)
+char **splitName(char *name)
 {
     char str[80];
     strcpy(str, name);
@@ -207,7 +207,7 @@ char **split_name(char *name)
 
 // as we created the split names with malloc we need to free
 // the data when we are done with it
-void free_names(char **names)
+void freeNames(char **names)
 {
     free(names[0]);
     free(names[1]);
@@ -215,7 +215,7 @@ void free_names(char **names)
 }
 
 // Strips filename and extension of spaces
-char **strip_name(DirStructType *dir)
+char **stripName(DirStructType *dir)
 {
     char name[9];
     char extension[4];
@@ -245,7 +245,7 @@ char **strip_name(DirStructType *dir)
 }
 
 // checks to see if the first character is A-Z a-z or 0-9
-bool illegalstart(char *name)
+bool illegalStart(char *name)
 {
     int first = (int)name[0];
 
@@ -269,7 +269,7 @@ bool checkLegalName(char *name)
     }
     else
     {
-        char **names = split_name(name);
+        char **names = splitName(name);
         char *filename = names[0];
         char *extension = names[1];
 
@@ -285,13 +285,13 @@ bool checkLegalName(char *name)
         }
 
         // illegal first character
-        else if (illegalstart(filename))
+        else if (illegalStart(filename))
         {
             return_code = false;
         }
 
         // if extension isnt empty check for legal first character
-        else if ((strcmp(extension, "") != 0) && illegalstart(extension))
+        else if ((strcmp(extension, "") != 0) && illegalStart(extension))
         {
             return_code = false;
         }
@@ -301,7 +301,7 @@ bool checkLegalName(char *name)
         {
             return_code = true;
         }
-        free_names(names);
+        freeNames(names);
     }
 
     return return_code;
@@ -338,13 +338,13 @@ void cpmDir()
             int length = (dir->RC * 128) + dir->BC + (full_blocks * 1024);
 
             // merge filename and extension for padding
-            char **names = strip_name(dir);
+            char **names = stripName(dir);
             char filename[14];
             sprintf(filename, "%s.%s", names[0], names[1]);
 
             // pad filename with spaces to get even output
             printf("%-12s %d\n", filename, length);
-            free_names(names);
+            freeNames(names);
         }
     }
 }
@@ -380,7 +380,7 @@ int cpmRename(char *oldName, char *newName)
         if (location != -1)
         {
             DirStructType *dir = mkDirStruct(location, NULL);
-            char **names = split_name(newName);
+            char **names = splitName(newName);
             strcpy(dir->name, names[0]);
             strcpy(dir->extension, names[1]);
             writeDirStruct(dir, location, NULL);
