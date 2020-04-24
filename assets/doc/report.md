@@ -186,8 +186,8 @@ void makeFreeList()
 
 ### printFreeList
 
- This function will enumerate through the global free list and print "*" if the block is in use or "." if it is not.
- Additionally, it prints it as a 16 by 16 block of "*"s or "."s for formatting purposes.
+ This function will enumerate through the global free list and print "\*" if the block is in use or "." if it is not.
+ Additionally, it prints it as a 16 by 16 block of "\*"s or "."s for formatting purposes.
 
 ```c
 void printFreeList()
