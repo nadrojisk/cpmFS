@@ -7,7 +7,7 @@ This repository is for Project 4 for the Advanced Operating Systems class offere
 ## Summary
 
 In this project we were required to design and implement features for the CP/M file system. 
-I was tasked with implementing the following functioalities: `mkDirStruct`, `writeDirStruct`, `makeFreeList`, `printFreeList`, `checkLegalName`, `findExtentWithName`, `cpmDir`, `cpmDelete`, and `cpmRename`.
+I was tasked with implementing the following functionalities: `mkDirStruct`, `writeDirStruct`, `makeFreeList`, `printFreeList`, `checkLegalName`, `findExtentWithName`, `cpmDir`, `cpmDelete`, and `cpmRename`.
 
 ## Structure
 
