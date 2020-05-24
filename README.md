@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository is for Project 4 for the Advanced Topics in Operating Systems class offered at Auburn Univeristy (Spring 2020) by Dr. Xiao Qin.
+This repository is for Project 4 for the Advanced Operating Systems class offered at Auburn Univeristy (Spring 2020) by Dr. Xiao Qin.
 
 ## Summary
 
